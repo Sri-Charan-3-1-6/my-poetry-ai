@@ -890,24 +890,47 @@ st.markdown(
           opacity: 0.7 !important;
       }
       
-      /* Remove animations from UI cards but preserve text cursor */
-      .stAlert, .stInfo, .stWarning, .stSuccess, .stError {
+      /* COMPLETE ANIMATION BLOCKING - Remove all blinking/pulsing effects */
+      *, *::before, *::after {
+          animation: none !important;
+          animation-duration: 0s !important;
+          animation-delay: 0s !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0s !important;
+      }
+      
+      /* Specifically target Streamlit components */
+      .stAlert, .stInfo, .stWarning, .stSuccess, .stError,
+      .stSelectbox, .stMultiSelect, .stRadio, .stCheckbox,
+      .element-container, .stMarkdown, .block-container,
+      .stSpinner, .stProgress, .stBalloons, .stSnow {
+          animation: none !important;
+          transition: none !important;
+          transform: none !important;
+      }
+      
+      /* Remove any pulsing/breathing effects */
+      .stSelectbox > div, .stSelectbox > div > div,
+      .stSelectbox > div > div > div, .stSelectbox > div > div > div > div {
+          animation: none !important;
+          transition: none !important;
+          opacity: 1 !important;
+      }
+      
+      /* Disable hover animations */
+      .stSelectbox:hover, .stTextInput:hover, .stButton:hover {
           animation: none !important;
           transition: none !important;
       }
       
-      .stSelectbox > div > div > div {
-          animation: none !important;
-          transition: opacity 0.2s ease !important;
-      }
-      
-      /* Disable any blinking/pulsing effects on containers */
-      .element-container, .stMarkdown, .block-container {
-          animation: none !important;
-      }
-      
-      /* Ensure normal cursor behavior in text inputs */
+      /* Exception: Preserve normal text cursor blinking */
       .stTextInput input {
+          caret-color: #000000 !important;
+          animation: none !important;
+      }
+      
+      /* Allow only cursor blinking */
+      input, textarea {
           caret-color: #000000 !important;
       }
     </style>
@@ -4025,34 +4048,16 @@ def main():
         use_model = st.checkbox("🧠 Use AI Model (experimental)", value=False,  # Default to False for reliability
                                 help="Generate text with a small multilingual model (mT5-small). May be slower and less reliable.")
 
-        # Language selection (stable autocomplete search)
+        # Language selection (completely stable - no dynamic elements)
         lang_names = get_all_language_names()
         
-        # Create a search input that filters languages
-        search_query = st.text_input(
+        # Simple, stable selectbox instead of dynamic search
+        target_language = st.selectbox(
             "🌍 Target Language:",
-            value="English",
-            placeholder="Start typing to search languages...",
-            help="Type to search and select from available languages",
-            key="main_lang_search"
+            options=lang_names,
+            index=lang_names.index("English") if "English" in lang_names else 0,
+            help="Select your target language from the list"
         )
-        
-        # Filter languages based on search query - make it stable
-        if search_query and len(search_query) > 0:
-            filtered_languages = [lang for lang in lang_names if search_query.lower() in lang.lower()]
-            if len(filtered_languages) > 1 and search_query not in lang_names:
-                # Only show dropdown if there are multiple matches and it's not an exact match
-                with st.container():
-                    target_language = st.selectbox(
-                        "📋 Select from matches:",
-                        options=filtered_languages,
-                        key="main_lang_select",
-                        index=0
-                    )
-            else:
-                target_language = search_query
-        else:
-            target_language = "English"
 
         # Poetry style
         poetry_style = st.selectbox(
@@ -4106,31 +4111,20 @@ def main():
                     default_lang = pref
                     break
                     
-            # Create stable autocomplete search for translation language
-            search_query_trans = st.text_input(
-                "🗣️ Target Language:",
-                value=default_lang,
-                placeholder="Start typing to search languages...",
-                help="Type to search and select translation language",
-                key="trans_lang_search"
+            # Simple stable language selection for translation
+            lang_names = get_all_language_names()
+            default_lang = "Hindi"
+            for pref in ("Hindi", "Tamil", "Telugu", "Malayalam", "Kannada", "Bengali"):
+                if pref in lang_names:
+                    default_lang = pref
+                    break
+                    
+            target_language = st.selectbox(
+                "�️ Target Language:",
+                options=lang_names,
+                index=lang_names.index(default_lang) if default_lang in lang_names else 0,
+                help="Select the language to translate your text into"
             )
-            
-            # Filter languages for translation mode - stable version
-            if search_query_trans and len(search_query_trans) > 0:
-                filtered_languages_trans = [lang for lang in lang_names if search_query_trans.lower() in lang.lower()]
-                if len(filtered_languages_trans) > 1 and search_query_trans not in lang_names:
-                    # Only show dropdown if multiple matches and not exact match
-                    with st.container():
-                        target_language = st.selectbox(
-                            "📋 Select from matches:",
-                            options=filtered_languages_trans,
-                            key="trans_lang_select",
-                            index=0
-                        )
-                else:
-                    target_language = search_query_trans
-            else:
-                target_language = default_lang
             
             translation_style = st.selectbox(
                 "🎨 Translation Style:",
