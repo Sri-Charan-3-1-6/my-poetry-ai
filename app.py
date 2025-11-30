@@ -2,6 +2,7 @@ import streamlit as st
 from PIL import Image
 import random
 import os
+import sys
 import tempfile
 import base64
 from io import BytesIO
@@ -11,6 +12,7 @@ import logging
 import hashlib
 import re
 import urllib.request
+from html import escape
 from streamlit.components.v1 import html as st_html
 try:
     from gtts import gTTS
@@ -111,6 +113,14 @@ except ImportError as e:
     model = None
     tokenizer = None
 
+# Try to import test runner
+try:
+    from run_tests import run_tests
+    RUN_TESTS_AVAILABLE = True
+except ImportError:
+    RUN_TESTS_AVAILABLE = False
+    run_tests = None
+
 # Additional imports for enhanced features
 import json
 import uuid
@@ -126,7 +136,13 @@ import hashlib
 from dataclasses import dataclass
 from typing import Dict, List, Set, Tuple, Optional, Any
 import math
-import networkx as nx
+try:
+    import networkx as nx
+    NETWORKX_AVAILABLE = True
+except ImportError:
+    NETWORKX_AVAILABLE = False
+    nx = None
+
 try:
     from fpdf import FPDF
     PDF_AVAILABLE = True
@@ -272,21 +288,43 @@ class SemanticGraph:
     """Graph structure for semantic word relationships"""
     
     def __init__(self):
-        self.graph = nx.Graph()
+        if NETWORKX_AVAILABLE and nx is not None:
+            self.graph = nx.Graph()
+        else:
+            # Fallback to simple dictionary-based graph
+            self.graph = {}
         self.concept_clusters = {}
         self.word_embeddings = {}
+        self.networkx_available = NETWORKX_AVAILABLE and nx is not None
     
     def add_word_relationship(self, word1: str, word2: str, relationship_type: str, strength: float):
         """Add a semantic relationship between two words"""
-        self.graph.add_edge(word1, word2, 
-                           relationship=relationship_type, 
-                           weight=strength)
+        if self.networkx_available:
+            self.graph.add_edge(word1, word2, 
+                               relationship=relationship_type, 
+                               weight=strength)
+        else:
+            # Simple fallback implementation
+            if word1 not in self.graph:
+                self.graph[word1] = []
+            if word2 not in self.graph:
+                self.graph[word2] = []
+            self.graph[word1].append((word2, relationship_type, strength))
+            self.graph[word2].append((word1, relationship_type, strength))
     
     def find_semantic_path(self, start_word: str, end_word: str) -> List[str]:
         """Find semantic path between words using shortest path"""
-        try:
-            return nx.shortest_path(self.graph, start_word, end_word, weight='weight')
-        except nx.NetworkXNoPath:
+        if self.networkx_available:
+            try:
+                return nx.shortest_path(self.graph, start_word, end_word, weight='weight')
+            except:
+                return []
+        else:
+            # Simple fallback - direct connection only
+            if start_word in self.graph:
+                for neighbor, _, _ in self.graph[start_word]:
+                    if neighbor == end_word:
+                        return [start_word, end_word]
             return []
     
     def get_related_words(self, word: str, max_distance: int = 2) -> List[Tuple[str, float]]:
@@ -295,28 +333,38 @@ class SemanticGraph:
             return []
         
         related = []
-        try:
-            distances = nx.single_source_shortest_path_length(self.graph, word, cutoff=max_distance)
-            for related_word, distance in distances.items():
-                if related_word != word and distance <= max_distance:
-                    # Calculate semantic similarity based on distance
-                    similarity = 1.0 / (1.0 + distance)
-                    related.append((related_word, similarity))
-        except:
-            pass
+        if self.networkx_available:
+            try:
+                distances = nx.single_source_shortest_path_length(self.graph, word, cutoff=max_distance)
+                for related_word, distance in distances.items():
+                    if related_word != word and distance <= max_distance:
+                        # Calculate semantic similarity based on distance
+                        similarity = 1.0 / (1.0 + distance)
+                        related.append((related_word, similarity))
+            except:
+                pass
+        else:
+            # Simple fallback - direct neighbors only
+            if word in self.graph:
+                for neighbor, _, strength in self.graph[word]:
+                    related.append((neighbor, strength))
         
         return sorted(related, key=lambda x: x[1], reverse=True)
     
     def cluster_concepts(self, concepts: List[str]) -> Dict[str, List[str]]:
         """Cluster related concepts using community detection"""
-        subgraph = self.graph.subgraph(concepts)
-        try:
-            communities = nx.community.greedy_modularity_communities(subgraph)
-            clusters = {}
-            for i, community in enumerate(communities):
-                clusters[f"cluster_{i}"] = list(community)
-            return clusters
-        except:
+        if self.networkx_available:
+            try:
+                subgraph = self.graph.subgraph(concepts)
+                communities = nx.community.greedy_modularity_communities(subgraph)
+                clusters = {}
+                for i, community in enumerate(communities):
+                    clusters[f"cluster_{i}"] = list(community)
+                return clusters
+            except:
+                return {"single_cluster": concepts}
+        else:
+            # Simple fallback - all concepts in one cluster
             return {"single_cluster": concepts}
 
 class RhymeEngine:
@@ -890,13 +938,25 @@ st.markdown(
           opacity: 0.7 !important;
       }
       
-      /* COMPLETE ANIMATION BLOCKING - Remove all blinking/pulsing effects */
-      *, *::before, *::after {
+      /* SELECTIVE ANIMATION BLOCKING - Remove blinking/pulsing effects but allow creature animations */
+      .stTextInput *, .stTextArea *, .stButton *, .stSelectbox *, 
+      .stSlider *, .stNumberInput *, .stDateInput *, .stCheckbox *,
+      .stRadio *, .stMultiSelect *, .stColorPicker * {
           animation: none !important;
           animation-duration: 0s !important;
           animation-delay: 0s !important;
           animation-iteration-count: 1 !important;
           transition-duration: 0s !important;
+      }
+      
+      /* EXCEPTION: Allow flying creature animations */
+      .flying-creatures, .flying-creatures *, 
+      .flying-bird, .floating-butterfly, .floating-leaf, .floating-petal {
+          animation: unset !important;
+          animation-duration: unset !important;
+          animation-delay: unset !important;
+          animation-iteration-count: unset !important;
+          transition: unset !important;
       }
       
       /* Specifically target Streamlit components */
@@ -1009,6 +1069,100 @@ def _builtin_language_registry():
             {'name': 'Sylheti', 'region': 'India', 'code_translate': None, 'code_tts': None, 'code_asr': None},
             {'name': 'Pahari-Pothwari', 'region': 'India', 'code_translate': None, 'code_tts': None, 'code_asr': None},
         ]
+
+        rename_map = {
+            'Kokborok (Tripuri)': 'Kokborok / Tripuri / Kakbarak',
+            'Mizo (Lushai)': 'Mizo',
+            'Bhutia (Sikkimese)': 'Sikkimese (Bhutia)',
+            'Ladakhi (Bhoti)': 'Ladakhi (Bhoti)',
+            'Kurukh (Oraon)': 'Kurukh / Oraon',
+            'Meitei (Manipuri)': 'Manipuri (Meitei)',
+            'Kodava (Coorgi)': 'Kodava'
+        }
+
+        for entry in base:
+            name = entry.get('name')
+            if name in rename_map:
+                entry['name'] = rename_map[name]
+
+        existing_names = {entry['name'] for entry in base}
+
+        additional_names = [
+            "Maithili",
+            "Santali",
+            "Dogri",
+            "Bodo",
+            "Limboo",
+            "Bhili",
+            "Sora",
+            "Koya",
+            "Lambadi",
+            "Nicobarese",
+            "Bihari",
+            "Kharia",
+            "Khortha",
+            "Kurmali",
+            "Nagpuri",
+            "Sherpa",
+            "Tamang",
+            "Kamthi",
+            "Kamtapuri",
+            "Khandeshi",
+            "Korwa",
+            "Rai",
+            "Sherdukpen",
+            "Soliga",
+            "Aka",
+            "Ao",
+            "Apatani",
+            "Arunachali",
+            "Bagheli",
+            "Baiga",
+            "Banjara",
+            "Bhatri",
+            "Bind",
+            "Dongari",
+            "Gadaba",
+            "Gangte",
+            "Hmar",
+            "Irula",
+            "Jaintia",
+            "Jamatia",
+            "Jarawa",
+            "Kachari",
+            "Kadar",
+            "Kharwar",
+            "Konyak",
+            "Kurumba",
+            "Lakher",
+            "Lotha",
+            "Manda",
+            "Mara",
+            "Mising (Mishing)",
+            "Muria",
+            "Nishi",
+            "Nocte",
+            "Nyishi",
+            "Onge",
+            "Panchpargania",
+            "Phom",
+            "Rabha",
+            "Rengma",
+            "Sema",
+            "Spiti",
+            "Tagin",
+            "Tangkhul",
+            "Tharu",
+            "Toda",
+            "Wancho",
+            "Zeliang"
+        ]
+
+        for name in additional_names:
+            if name not in existing_names:
+                base.append({'name': name, 'region': 'India', 'code_translate': None, 'code_tts': None, 'code_asr': None})
+                existing_names.add(name)
+
         # Keep alphabetical for nicer UX
         return sorted(base, key=lambda x: x['name'].lower())
 
@@ -1307,76 +1461,91 @@ def _dbg(msg: str):
         pass
 
 def get_tts_lang_code(language_name: str) -> str:
-        """Resolve a gTTS language code from the registry with sensible fallbacks."""
-        try:
-                lang_item = get_language_by_name(language_name) or {}
-                code = lang_item.get('code_tts')
-                if code:
-                        return code
-        except Exception:
-                pass
-        # Minimal hard fallback for a few known names
-        basic = {
-                "English": "en", "Spanish": "es", "French": "fr", "German": "de", "Italian": "it",
-                "Portuguese": "pt", "Russian": "ru", "Japanese": "ja", "Chinese": "zh-CN", "Arabic": "ar",
-                "Hindi": "hi", "Telugu": "te", "Malayalam": "ml", "Kannada": "kn", "Tamil": "ta",
-                "Bengali": "bn", "Marathi": "mr", "Gujarati": "gu", "Urdu": "ur",
-        }
-        return basic.get(language_name, "en")
+    """Resolve a gTTS language code from the registry with sensible fallbacks."""
+    try:
+        lang_item = get_language_by_name(language_name) or {}
+        code = lang_item.get('code_tts')
+        if code:
+            return code
+    except Exception:
+        pass
+    # Minimal hard fallback for a few known names
+    basic = {
+        "English": "en", "Spanish": "es", "French": "fr", "German": "de", "Italian": "it",
+        "Portuguese": "pt", "Russian": "ru", "Japanese": "ja", "Chinese": "zh-CN", "Arabic": "ar",
+        "Hindi": "hi", "Telugu": "te", "Malayalam": "ml", "Kannada": "kn", "Tamil": "ta",
+        "Bengali": "bn", "Marathi": "mr", "Gujarati": "gu", "Urdu": "ur",
+    }
+    return basic.get(language_name, "en")
 
 def render_browser_tts(text: str, language_name: str, speed: float = 1.0, title: str = "Try browser voice (fallback)"):
-        """Client-side TTS using Web Speech API as a fallback when server TTS fails.
-        This runs in the user's browser and doesn't require server audio files.
-        """
-        if not text or not text.strip():
-                return
-        # Try to map to a BCP-47 tag for better voice selection
-        code = get_tts_lang_code(language_name)
-        # Prefer region-specific tags for some languages
-        bcp47_map = {
-                'en': 'en-US', 'hi': 'hi-IN', 'te': 'te-IN', 'ta': 'ta-IN', 'ml': 'ml-IN', 'kn': 'kn-IN', 'ur': 'ur-IN',
-                'bn': 'bn-IN', 'mr': 'mr-IN', 'gu': 'gu-IN', 'fr': 'fr-FR', 'de': 'de-DE', 'it': 'it-IT', 'pt': 'pt-PT',
-                'ru': 'ru-RU', 'ja': 'ja-JP', 'zh-CN': 'zh-CN', 'ar': 'ar-SA'
-        }
-        lang_tag = bcp47_map.get(code, code)
-        rate = max(0.5, min(2.0, float(speed or 1.0)))
-        escaped = (text.replace("\\", "\\\\").replace("`", "\\`")
-                                        .replace("</", "<\\/").replace("\n", " "))
-        st_html(f"""
-        <div style='margin-top: 0.25rem;'>
-            <button id='speakBtn' style='padding:6px 10px; border-radius:8px; border:1px solid #ddd;'>🗣️ {title}</button>
-            <button id='stopBtn' style='padding:6px 10px; border-radius:8px; border:1px solid #ddd; margin-left:6px;'>⏹️ Stop</button>
-            <small style='margin-left:8px; opacity:0.7'>(uses your device voice)</small>
+    """Client-side TTS using Web Speech API as a fallback when server TTS fails.
+    This runs in the user's browser and doesn't require server audio files.
+    """
+    if not text or not text.strip():
+        return None
+        
+    # Get base language code
+    lang_code = get_tts_lang_code(language_name)
+    
+    # Clean text
+    clean_text = text.replace("*", "").replace("#", "").replace("**", "").strip()
+    
+    # Create unique element IDs
+    button_id = f"tts_button_{hash(clean_text)}"
+    status_id = f"tts_status_{hash(clean_text)}"
+    
+    st.markdown(
+        f"""
+        <div style="padding: 1em; border: 1px solid #ccc; border-radius: 5px; margin: 1em 0;">
+            <h4 style="margin-top: 0;">{title}</h4>
+            <p>Server-side audio generation failed. Try browser-based voice:</p>
+            <button 
+                id="{button_id}"
+                onclick="speak('{clean_text}', '{lang_code}', {speed})"
+                style="padding: 0.5em 1em; cursor: pointer;"
+            >
+                🔊 Play in Browser
+            </button>
+            <p id="{status_id}" style="margin-top: 0.5em; font-style: italic;"></p>
         </div>
+        
         <script>
-            const text = `{escaped}`;
-            const desiredLang = `{lang_tag}`;
-            const rate = {rate};
-            function pickVoice() {{
-                const voices = window.speechSynthesis.getVoices();
-                if (!voices || voices.length === 0) return null;
-                let v = voices.find(v => v.lang && (v.lang === desiredLang || v.lang.startsWith(desiredLang.split('-')[0])));
-                if (!v) v = voices.find(v => v.lang && v.lang.startsWith('en'));
-                return v || voices[0];
+            function speak(text, lang, rate) {{
+                var status = document.getElementById("{status_id}");
+                var button = document.getElementById("{button_id}");
+                
+                if (!window.speechSynthesis) {{
+                    status.textContent = "❌ Speech synthesis not supported in your browser";
+                    return;
+                }}
+                
+                button.disabled = true;
+                var utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = lang;
+                utterance.rate = rate;
+                
+                utterance.onstart = function() {{
+                    status.textContent = "🎵 Playing...";
+                }};
+                
+                utterance.onend = function() {{
+                    status.textContent = "✅ Done";
+                    button.disabled = false;
+                }};
+                
+                utterance.onerror = function(e) {{
+                    status.textContent = "❌ Error: " + e.error;
+                    button.disabled = false;
+                }};
+                
+                window.speechSynthesis.speak(utterance);
             }}
-            function speak() {{
-                if (!('speechSynthesis' in window)) {{ alert('Speech Synthesis not supported in this browser.'); return; }}
-                const utter = new SpeechSynthesisUtterance(text);
-                const voice = pickVoice();
-                if (voice) utter.voice = voice;
-                utter.lang = desiredLang;
-                utter.rate = rate;
-                window.speechSynthesis.cancel();
-                window.speechSynthesis.speak(utter);
-            }}
-            document.getElementById('speakBtn').onclick = () => {{
-                if (window.speechSynthesis.getVoices().length === 0) {{
-                    window.speechSynthesis.onvoiceschanged = speak;
-                }} else {{ speak(); }}
-            }};
-            document.getElementById('stopBtn').onclick = () => window.speechSynthesis.cancel();
         </script>
-        """, height=60)
+        """,
+        unsafe_allow_html=True
+    )
+    return None  # No file path since this is browser-based
 
 def translate_text(text, target_language):
     """Translate text to target language using deep-translator"""
@@ -1500,11 +1669,17 @@ def extract_common_words(poem_text):
     
     return [word for word, count in Counter(meaningful_words).most_common(10)]
 
+def create_simple_background_tone(duration_ms, theme="peaceful"):
+    """Create a simple background tone when full audio processing isn't available"""
+    # This is a fallback that doesn't require FFmpeg - just returns None gracefully
+    # The audio system will handle this appropriately
+    return None
+
 def create_background_music(duration_ms, theme="peaceful", key="C"):
     """Generate simple background music based on theme with better error handling"""
     if not AUDIO_PROCESSING_AVAILABLE:
-        st.warning("🎵 Audio processing not available - FFmpeg required for background music")
-        return None
+        st.info("🎵 Using basic audio mode (install FFmpeg for enhanced music features)")
+        return create_simple_background_tone(duration_ms, theme)
     
     try:
         # Test basic audio generation capability first
@@ -1786,7 +1961,7 @@ def create_musical_poetry_audio(text, language="English", speed=1.0, theme=None,
 
         # If audio processing isn't available, just return the basic TTS
         if not AUDIO_PROCESSING_AVAILABLE:
-            st.info("🔊 Using basic voice-over (FFmpeg required for musical enhancement)")
+            st.info("🔊 Basic voice-over created successfully (install FFmpeg for musical enhancement)")
             return temp_file_path
 
         # Try to load and enhance the speech with better error handling
@@ -1841,7 +2016,7 @@ def create_musical_poetry_audio(text, language="English", speed=1.0, theme=None,
                     st.warning("Background music generation failed, using speech only")
                     final_audio = speech_audio
             except Exception as e:
-                st.warning(f"Background music failed: {e}, using speech only")
+                st.info(f"Using speech-only audio (background music requires FFmpeg)")
                 final_audio = speech_audio
 
             # Export final audio with better error handling
@@ -1945,79 +2120,75 @@ def create_simple_audio(text, language="en", speed=1.0, voice_type="neutral"):
         st.error(f"Audio creation failed: {str(e)}")
         return None
 
-def create_audio_from_text(text, language="en", speed=1.0, voice_type="neutral"):
-    """Generate audio from text using gTTS with voice options"""
-    if not TTS_AVAILABLE:
-        st.warning("Text-to-speech not available. Install gTTS to enable audio features.")
+def create_audio_from_text(text: str, language: str = "en", speed: float = 1.0, voice_type: str = "neutral") -> Optional[str]:
+    """Generate audio from text using gTTS with enhanced features and caching"""
+    # Import TTS only when needed
+    try:
+        from gtts import gTTS
+        from audio_utils import (
+            init_audio_cache, clean_audio_cache, get_cache_path,
+            get_voice_config, validate_speed, clean_text_for_tts,
+            is_internet_available
+        )
+    except ImportError:
+        st.error("Text-to-speech not available. Please run: pip install gTTS")
         return None
+
+    # Initialize and clean audio cache
+    init_audio_cache()
+    clean_audio_cache()
     
-    # Check internet connection
-    if not test_internet_connection():
-        st.error("Internet connection required for text-to-speech. Please check your connection.")
+    # Basic validation
+    if not text.strip():
+        st.warning("No text provided for audio generation.")
         return None
+        
+    if not is_internet_available():
+        st.error("Internet connection required for text-to-speech.")
+        st.info("Trying fallback to browser-based TTS...")
+        return render_browser_tts(text, language, speed)
 
     try:
-        # Resolve via registry
+        # Get language code with fallback
         lang_code = get_tts_lang_code(language)
         
-        # Voice type mapping for different TLD (Top Level Domain) for gTTS
-        # Different TLDs provide different voices/accents
-        voice_mapping = {
-            # Male voices
-            "male_1": {"tld": "com", "description": "Male Voice 1 - Professional"},
-            "male_2": {"tld": "co.uk", "description": "Male Voice 2 - British Accent"},
-            # Female voices  
-            "female_1": {"tld": "com.au", "description": "Female Voice 1 - Australian Accent"},
-            "female_2": {"tld": "ca", "description": "Female Voice 2 - Canadian Accent"},
-            # Neutral/default
-            "neutral": {"tld": "com", "description": "Default Voice"}
-        }
+        # Clean and prepare text
+        clean_text = clean_text_for_tts(text)
         
-        voice_config = voice_mapping.get(voice_type, voice_mapping["neutral"])
+        # Get voice configuration
+        voice_config = get_voice_config(voice_type)
         
-        # Clean text for TTS (remove markdown and special characters)
-        clean_text = text.replace("*", "").replace("#", "").replace("**", "")
+        # Validate speed
+        adjusted_speed = validate_speed(speed, voice_type)
         
-        # Ensure we have text to process
-        if not clean_text.strip():
-            st.warning("No text available for audio generation.")
-            return None
-
-        st.info(f"🎤 Generating audio with {voice_config['description']} for: '{clean_text[:50]}...' in {language}")
-        
-        # Create TTS object with voice selection
-        tts = gTTS(
-            text=clean_text, 
-            lang=lang_code, 
-            slow=(speed < 1.0),
-            tld=voice_config['tld']
-        )
-        
-        # Create a safe temporary directory
-        temp_dir = tempfile.mkdtemp()
-        temp_file_path = os.path.join(temp_dir, f"tts_audio_{int(time.time())}.mp3")
-        
-        st.info(f"📁 Creating audio file at: {temp_file_path}")
-        
-        # Save to temporary file with explicit path
-        tts.save(temp_file_path)
-        
-        # Verify file was created
-        if os.path.exists(temp_file_path) and os.path.getsize(temp_file_path) > 0:
-            file_size = os.path.getsize(temp_file_path)
-            st.success(f"✅ Audio generated successfully! File size: {file_size} bytes")
-            st.info(f"📂 Audio file location: {temp_file_path}")
-            return temp_file_path
-        else:
-            st.error("Failed to create audio file.")
-            return None
+        # Check cache first
+        cache_path = get_cache_path(clean_text, lang_code, adjusted_speed, voice_type)
+        if cache_path.exists():
+            return str(cache_path)
+            
+        # Generate new audio
+        with st.spinner("🎵 Generating audio..."):
+            tts = gTTS(
+                text=clean_text,
+                lang=lang_code,
+                slow=(adjusted_speed < 1.0),
+                tld=voice_config["tld"]
+            )
+            
+            # Save to cache
+            tts.save(str(cache_path))
+            
+            if not cache_path.exists():
+                raise FileNotFoundError("Failed to save audio file")
+                
+            return str(cache_path)
             
     except Exception as e:
-        st.error(f"Audio generation error: {str(e)}")
-        # Check if it's a network error
-        if "urlopen error" in str(e) or "timeout" in str(e).lower():
-            st.error("Network error: Please check your internet connection.")
-        return None
+        st.error(f"Audio generation failed: {str(e)}")
+        st.info("Trying fallback to browser-based TTS...")
+        return render_browser_tts(text, language, speed)
+        
+    return None
 
 def generate_tts(text, target_language, speed=1.0, voice_type="neutral"):
     """Generate TTS audio for translated text with language mapping for translation mode"""
@@ -3983,6 +4154,20 @@ def learning_interface():
 
 
 def main():
+    # Check for test modes
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "--test":
+            if not RUN_TESTS_AVAILABLE:
+                print("run_tests module not available. Skipping CLI tests.")
+            else:
+                run_tests()
+            return
+        elif sys.argv[1] == "--test-audio":
+            # Run audio system tests
+            import test_audio_system
+            test_audio_system.test_audio_system()
+            return
+            
     # Initialize session state variables first (before any UI elements)
     if "prompt_text" not in st.session_state:
         st.session_state["prompt_text"] = ""
@@ -4014,12 +4199,21 @@ def main():
         st.session_state.translated_text = ""
     if "translation_settings" not in st.session_state:
         st.session_state.translation_settings = {}
+    if "prompt_without_image" not in st.session_state:
+        st.session_state.prompt_without_image = ""
+    if "last_image_hash" not in st.session_state:
+        st.session_state.last_image_hash = None
     
     # Initialize history
     if "poem_history" not in st.session_state:
         st.session_state.poem_history = []
     if "show_history" not in st.session_state:
         st.session_state.show_history = False
+    
+    # Initialize advanced data structures (one-time setup)
+    if "advanced_structures_initialized" not in st.session_state:
+        initialize_advanced_structures()
+        st.session_state.advanced_structures_initialized = True
 
     header_with_mascot()
     st.markdown("<div class='soft-card'>Generate beautiful poetry across multiple languages with AI</div>", unsafe_allow_html=True)
@@ -4274,7 +4468,25 @@ def main():
             )
         else:
             if not AUDIO_PROCESSING_AVAILABLE:
-                st.caption("Musical background disabled because FFmpeg isn't available on this server. Basic voice-over still works; if it fails, use the device voice fallback shown under the poem.")
+                st.info("🎵 **Audio Features Available:**")
+                st.markdown("✅ Basic voice-over (gTTS)")
+                st.markdown("❌ Musical background & effects (requires FFmpeg)")
+                
+                with st.expander("📥 How to Enable Enhanced Audio Features"):
+                    st.markdown("""
+                    **For Enhanced Musical Audio:**
+                    1. **Install FFmpeg** on your system
+                    2. **Windows**: Download from [https://ffmpeg.org/download.html](https://ffmpeg.org/download.html)
+                    3. **Or use Windows Package Manager**: `winget install Gyan.FFmpeg`
+                    4. **Add FFmpeg to your PATH** or place in common directories
+                    5. **Restart the application** after installation
+                    
+                    **What you get with FFmpeg:**
+                    - 🎼 Background music generation
+                    - 🎛️ Audio effects (reverb, echo, enhance)
+                    - 🔊 High-quality audio mixing
+                    - 📁 Multiple export formats (MP3, WAV)
+                    """)
             musical_theme = None  # Will auto-detect
             audio_effects = "none"
             bg_volume_percent = 40
@@ -4460,6 +4672,7 @@ def main():
         # Update session state when prompt changes
         if prompt != st.session_state["prompt_text"]:
             st.session_state["prompt_text"] = prompt
+            st.session_state["prompt_without_image"] = prompt
         
         # Image upload with improved analysis
         st.subheader("🖼️ Visual Inspiration (Optional)")
@@ -4471,38 +4684,32 @@ def main():
         
         if uploaded_file is not None:
             try:
-                # Load and display image with error handling
-                image = Image.open(uploaded_file)
-                
-                # Verify image is valid
-                image.verify()
-                
-                # Reload image for processing (verify() closes the file)
-                uploaded_file.seek(0)
-                image = Image.open(uploaded_file)
-                
-                # Convert to RGB if needed (handles RGBA, grayscale, etc.)
+                # Read bytes once for consistent processing and hashing
+                image_bytes = uploaded_file.getvalue()
+                image_hash = hashlib.md5(image_bytes).hexdigest()
+
+                image_stream = io.BytesIO(image_bytes)
+                image = Image.open(image_stream)
+                image.verify()  # Validate file
+
+                # Reload after verification (verify closes the file)
+                image_stream.seek(0)
+                image = Image.open(image_stream)
+
                 if image.mode != 'RGB':
                     image = image.convert('RGB')
-                
-                # Display the image
+
                 st.image(image, caption="Your inspiration image", use_container_width=True)
-                
-                # Analyze image properties for better description
+
                 width, height = image.size
-                
-                # Basic color analysis
+
                 try:
-                    # Get dominant colors by sampling pixels
                     image_small = image.resize((50, 50))
                     pixels = list(image_small.getdata())
-                    
-                    # Calculate average color values
                     avg_r = sum(p[0] for p in pixels) / len(pixels)
                     avg_g = sum(p[1] for p in pixels) / len(pixels)
                     avg_b = sum(p[2] for p in pixels) / len(pixels)
-                    
-                    # Determine color mood
+
                     if avg_r > avg_g and avg_r > avg_b:
                         color_mood = "warm, passionate reds and oranges"
                     elif avg_g > avg_r and avg_g > avg_b:
@@ -4515,8 +4722,7 @@ def main():
                         color_mood = "deep, mysterious shadows"
                     else:
                         color_mood = "balanced, harmonious tones"
-                    
-                    # Determine brightness
+
                     brightness = (avg_r + avg_g + avg_b) / 3
                     if brightness > 200:
                         light_desc = "bathed in radiant light"
@@ -4526,8 +4732,7 @@ def main():
                         light_desc = "gently shadowed"
                     else:
                         light_desc = "wrapped in mysterious darkness"
-                    
-                    # Create rich description based on analysis
+
                     image_descriptions = [
                         f"a vision of {color_mood}, {light_desc}",
                         f"an image {light_desc} with {color_mood}",
@@ -4535,9 +4740,7 @@ def main():
                         f"a moment where {color_mood} meet the {light_desc.split()[-1]}",
                         f"beauty expressed through {color_mood} and {light_desc}"
                     ]
-                    
-                except Exception as color_error:
-                    # Fallback to generic descriptions if color analysis fails
+                except Exception:
                     image_descriptions = [
                         "a scene of breathtaking natural beauty",
                         "colors that dance with light and shadow", 
@@ -4547,36 +4750,43 @@ def main():
                         "a visual poem waiting to be written",
                         "inspiration captured in perfect harmony"
                     ]
-                
-                # Add image dimensions context
+
                 if width > height:
                     composition = "sweeping landscape"
                 elif height > width:
                     composition = "towering portrait"
                 else:
                     composition = "perfectly balanced frame"
-                
-                # Select and apply description
+
                 image_desc = random.choice(image_descriptions)
                 final_desc = f"{image_desc} in a {composition}"
-                
-                # Integrate with user prompt
-                if prompt.strip():
-                    prompt += f", inspired by {final_desc}"
+
+                if st.session_state.last_image_hash != image_hash:
+                    base_prompt = st.session_state.get("prompt_without_image", st.session_state.get("prompt_text", ""))
+                    if base_prompt.strip():
+                        new_prompt = f"{base_prompt.rstrip()}".rstrip(",") + f", inspired by {final_desc}"
+                    else:
+                        new_prompt = f"A poem inspired by {final_desc}"
+
+                    st.session_state["prompt_text"] = new_prompt
+                    prompt = new_prompt
+                    st.session_state.last_image_hash = image_hash
+                    st.success("🖼️ Image inspiration added to your prompt!")
                 else:
-                    prompt = f"A poem inspired by {final_desc}"
-                
-                # Show what was extracted
+                    prompt = st.session_state.get("prompt_text", prompt)
+
                 with st.expander("🎨 Image Analysis", expanded=False):
                     st.write(f"**Dimensions:** {width} × {height} pixels")
                     st.write(f"**Composition:** {composition}")
                     st.write(f"**Inspiration:** {final_desc}")
                     st.success("✅ Image successfully analyzed and integrated!")
-                
+
             except Exception as e:
                 st.error(f"❌ Error processing image: {str(e)}")
                 st.info("💡 Try uploading a different image format (PNG, JPG, JPEG, or WEBP)")
                 st.info("🔍 Make sure the image file is not corrupted and under 200MB")
+        else:
+            st.session_state.last_image_hash = None
         
         # Generate button
         generate_btn = st.button("🎪 Generate Cross-Language Poetry", type="primary", use_container_width=True)
@@ -4637,8 +4847,16 @@ def main():
                     'enable_voice': enable_voice,
                     'voice_speed': voice_speed,
                     'enable_musical': enable_musical,
-                    'prompt': prompt.strip()
+                    'prompt': prompt.strip(),
+                    'translation_mode': st.session_state.translation_mode
                 }
+
+                if st.session_state.translation_mode:
+                    translation_settings_preview = st.session_state.translation_settings or {}
+                    current_settings_preview.update({
+                        'translation_target_language': translation_settings_preview.get('target_language', target_language),
+                        'translation_style': translation_settings_preview.get('translation_style', 'Poetic')
+                    })
                 
                 settings_changed_preview = st.session_state.generation_settings != current_settings_preview
                 
@@ -4676,8 +4894,16 @@ def main():
                 'voice_speed': voice_speed,
                 'selected_voice': selected_voice,
                 'enable_musical': enable_musical,
-                'prompt': prompt.strip()  # Include prompt in settings to detect changes
+                'prompt': prompt.strip(),  # Include prompt in settings to detect changes
+                'translation_mode': st.session_state.translation_mode
             }
+
+            if st.session_state.translation_mode:
+                translation_settings_current = st.session_state.translation_settings or {}
+                current_settings.update({
+                    'translation_target_language': translation_settings_current.get('target_language', target_language),
+                    'translation_style': translation_settings_current.get('translation_style', 'Poetic')
+                })
             
             # Check if settings changed (if so, we should regenerate automatically)
             settings_changed = st.session_state.generation_settings != current_settings
@@ -4828,16 +5054,51 @@ def main():
                         
                         # Generate audio if enabled
                         audio_file = None
-                        if enable_voice and TTS_AVAILABLE:
+                        if enable_voice:
                             with st.spinner(f"🎵 Creating voice-over in {target_language}..."):
-                                if enable_musical and AUDIO_PROCESSING_AVAILABLE:
-                                    audio_file = create_musical_poetry_audio(
-                                        final_poetry, target_language, voice_speed, None, audio_effects, bg_volume_percent, selected_voice
+                                try:
+                                    # Try enhanced musical version first if enabled
+                                    if enable_musical and AUDIO_PROCESSING_AVAILABLE:
+                                        st.info("🎵 Creating enhanced musical voice-over...")
+                                        audio_file = create_musical_poetry_audio(
+                                            final_poetry,
+                                            target_language,
+                                            voice_speed,
+                                            theme,  # Pass theme for mood-matching
+                                            audio_effects,
+                                            bg_volume_percent,
+                                            selected_voice
+                                        )
+                                    else:
+                                        # Try standard TTS
+                                        st.info("🎤 Creating voice-over...")
+                                        audio_file = create_audio_from_text(
+                                            final_poetry,
+                                            target_language,
+                                            voice_speed,
+                                            selected_voice
+                                        )
+                                    
+                                    # Validate audio file
+                                    if audio_file and os.path.exists(audio_file):
+                                        st.success("✅ Voice-over generated successfully!")
+                                    else:
+                                        st.warning("⚠️ Server-side audio generation failed, trying browser fallback...")
+                                        render_browser_tts(
+                                            final_poetry,
+                                            target_language,
+                                            voice_speed
+                                        )
+                                except Exception as e:
+                                    st.error(f"❌ Audio generation error: {str(e)}")
+                                    st.info("💡 Trying browser-based voice...")
+                                    render_browser_tts(
+                                        final_poetry,
+                                        target_language,
+                                        voice_speed
                                     )
-                                else:
-                                    audio_file = create_simple_audio(final_poetry, target_language, voice_speed, selected_voice)
                         
-                        # Store generated content in session state to persist across setting changes
+                        # Store generated content in session state
                         st.session_state.generated_poem = final_poetry
                         st.session_state.generated_audio_file = audio_file
                         st.session_state.english_poetry = english_poetry  # Store original English version
@@ -5286,6 +5547,13 @@ def main():
         unsafe_allow_html=True,
     )
 
+# Add test animation to see if ANY animations work
+st.markdown("""
+<div class="test-animation">🔥</div>
+<div style="position: fixed; top: 200px; left: 0; font-size: 40px; color: blue; 
+           animation: simple-test 2s linear infinite; z-index: 99999;">🌟</div>
+""", unsafe_allow_html=True)
+
 if __name__ == "__main__":
     main()
 
@@ -5295,3 +5563,5 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Enhancements made to the app for better error handling and logging.
+
+

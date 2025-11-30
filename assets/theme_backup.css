@@ -575,3 +575,356 @@ div[class*="warning"] * {
 .stSidebar .stExpander[open] div[data-testid="stCheckbox"] span {
 	color: #2C2C2C !important;
 }
+
+
+
+@keyframes randomFly2 {
+	0% { transform: translate(110vw, 80vh) scale(1); opacity: 0; }
+	2% { opacity: 1; }
+	12% { transform: translate(85vw, 75vh) scale(1.1); }
+	25% { transform: translate(60vw, 85vh) scale(0.9); }
+	40% { transform: translate(35vw, 70vh) scale(1.2); }
+	55% { transform: translate(15vw, 90vh) scale(0.8); }
+	70% { transform: translate(5vw, 78vh) scale(1.1); }
+	85% { transform: translate(-5vw, 88vh) scale(1); }
+	98% { opacity: 1; }
+	100% { transform: translate(-15vw, 95vh) scale(0.9); opacity: 0; }
+}
+
+@keyframes randomFly3 {
+	0% { transform: translate(50vw, -50px) scale(1); opacity: 0; }
+	3% { opacity: 1; }
+	18% { transform: translate(45vw, 15vh) scale(1.1); }
+	32% { transform: translate(55vw, 35vh) scale(0.9); }
+	47% { transform: translate(40vw, 50vh) scale(1.2); }
+	62% { transform: translate(65vw, 70vh) scale(0.8); }
+	77% { transform: translate(35vw, 85vh) scale(1.1); }
+	92% { transform: translate(60vw, 100vh) scale(1); }
+	98% { opacity: 1; }
+	100% { transform: translate(50vw, 110vh) scale(0.9); opacity: 0; }
+}
+
+@keyframes randomFly4 {
+	0% { transform: translate(25vw, 110vh) scale(1); opacity: 0; }
+	3% { opacity: 1; }
+	16% { transform: translate(30vw, 85vh) scale(1.1); }
+	31% { transform: translate(20vw, 65vh) scale(0.9); }
+	46% { transform: translate(35vw, 45vh) scale(1.2); }
+	61% { transform: translate(15vw, 25vh) scale(0.8); }
+	76% { transform: translate(40vw, 10vh) scale(1.1); }
+	91% { transform: translate(25vw, -10px) scale(1); }
+	98% { opacity: 1; }
+	100% { transform: translate(30vw, -30px) scale(0.9); opacity: 0; }
+}
+
+@keyframes zigzagFly {
+	0% { transform: translate(-50px, 30vh) scale(1); opacity: 0; }
+	2% { opacity: 1; }
+	10% { transform: translate(10vw, 25vh) scale(1.1); }
+	20% { transform: translate(25vw, 35vh) scale(0.9); }
+	30% { transform: translate(40vw, 20vh) scale(1.2); }
+	40% { transform: translate(55vw, 40vh) scale(0.8); }
+	50% { transform: translate(70vw, 15vh) scale(1.1); }
+	60% { transform: translate(85vw, 45vh) scale(1); }
+	70% { transform: translate(95vw, 10vh) scale(0.9); }
+	80% { transform: translate(105vw, 50vh) scale(1.1); }
+	90% { transform: translate(115vw, 5vh) scale(1); }
+	98% { opacity: 1; }
+	100% { transform: translate(125vw, 55vh) scale(0.9); opacity: 0; }
+}
+
+@keyframes spiralFly {
+	0% { transform: translate(75vw, 50vh) scale(1); opacity: 0; }
+	2% { opacity: 1; }
+	12% { transform: translate(80vw, 45vh) scale(1.1); }
+	24% { transform: translate(85vw, 55vh) scale(0.9); }
+	36% { transform: translate(75vw, 60vh) scale(1.2); }
+	48% { transform: translate(65vw, 55vh) scale(0.8); }
+	60% { transform: translate(70vw, 45vh) scale(1.1); }
+	72% { transform: translate(80vw, 40vh) scale(1); }
+	84% { transform: translate(90vw, 50vh) scale(0.9); }
+	96% { transform: translate(85vw, 60vh) scale(1.1); }
+	98% { opacity: 1; }
+	100% { transform: translate(75vw, 50vh) scale(1); opacity: 0; }
+}
+
+/* Random Butterfly Movements */
+@keyframes butterflyDance1 {
+	0% { transform: translate(-50px, 60vh) scale(1); opacity: 0; }
+	3% { opacity: 1; }
+	8% { transform: translate(8vw, 55vh) scale(1.2); }
+	16% { transform: translate(18vw, 65vh) scale(0.8); }
+	24% { transform: translate(12vw, 50vh) scale(1.3); }
+	32% { transform: translate(25vw, 70vh) scale(0.9); }
+	40% { transform: translate(35vw, 45vh) scale(1.1); }
+	48% { transform: translate(28vw, 75vh) scale(0.7); }
+	56% { transform: translate(45vw, 40vh) scale(1.4); }
+	64% { transform: translate(55vw, 80vh) scale(0.8); }
+	72% { transform: translate(48vw, 35vh) scale(1.2); }
+	80% { transform: translate(65vw, 85vh) scale(0.9); }
+	88% { transform: translate(75vw, 30vh) scale(1.1); }
+	96% { transform: translate(85vw, 90vh) scale(1); }
+	98% { opacity: 1; }
+	100% { transform: translate(110vw, 95vh) scale(0.8); opacity: 0; }
+}
+
+@keyframes butterflyDance2 {
+	0% { transform: translate(110vw, 40vh) scale(1); opacity: 0; }
+	3% { opacity: 1; }
+	10% { transform: translate(95vw, 35vh) scale(1.1); }
+	20% { transform: translate(85vw, 45vh) scale(0.9); }
+	30% { transform: translate(90vw, 30vh) scale(1.3); }
+	40% { transform: translate(75vw, 50vh) scale(0.8); }
+	50% { transform: translate(65vw, 25vh) scale(1.2); }
+	60% { transform: translate(70vw, 55vh) scale(0.7); }
+	70% { transform: translate(55vw, 20vh) scale(1.4); }
+	80% { transform: translate(45vw, 60vh) scale(0.9); }
+	90% { transform: translate(35vw, 15vh) scale(1.1); }
+	95% { transform: translate(25vw, 65vh) scale(1); }
+	98% { opacity: 1; }
+	100% { transform: translate(-20px, 70vh) scale(0.8); opacity: 0; }
+}
+
+/* Flying creature container */
+.flying-creatures {
+	position: fixed !important;
+	top: 0 !important;
+	left: 0 !important;
+	width: 100% !important;
+	height: 100% !important;
+	pointer-events: none !important;
+	z-index: 1000 !important;
+	overflow: hidden !important;
+	display: block !important;
+}
+
+/* Override any animation blocking for flying creatures */
+.flying-creatures, .flying-creatures * {
+	animation: unset !important;
+	animation-duration: unset !important;
+	animation-delay: unset !important;
+	animation-iteration-count: unset !important;
+	transition: unset !important;
+}
+
+/* Hide creatures by default and only show when animating */
+.flying-bird, .floating-butterfly, .floating-leaf, .floating-petal {
+	visibility: hidden !important;
+	opacity: 0 !important;
+}
+
+/* Show creatures only when they have animations */
+.flying-bird[class*="bird"], .floating-butterfly[class*="butterfly"], 
+.floating-leaf[class*="leaf"], .floating-petal[class*="petal"] {
+	visibility: visible !important;
+	opacity: 1 !important;
+}
+
+/* Bird elements */
+.flying-bird {
+	position: absolute !important;
+	font-size: 28px !important;
+	filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3)) !important;
+	user-select: none !important;
+	opacity: 1 !important;
+	display: inline-block !important;
+	white-space: nowrap !important;
+	line-height: 1 !important;
+	background: transparent !important;
+	border: none !important;
+	margin: 0 !important;
+	padding: 0 !important;
+}
+
+.flying-bird.bird1 {
+	animation: randomFly1 12s ease-in-out infinite !important;
+	animation-delay: 0s !important;
+	color: #8B4513 !important;
+	text-shadow: 2px 2px 4px rgba(0,0,0,0.3), 0 0 8px rgba(139, 69, 19, 0.6) !important;
+	transform-origin: center !important;
+}
+
+.flying-bird.bird2 {
+	animation: randomFly2 15s ease-in-out infinite !important;
+	animation-delay: 3s !important;
+	color: #2F4F4F !important;
+	text-shadow: 2px 2px 4px rgba(0,0,0,0.3), 0 0 8px rgba(47, 79, 79, 0.6) !important;
+	transform-origin: center !important;
+}
+
+.flying-bird.bird3 {
+	animation: randomFly3 10s ease-in-out infinite !important;
+	animation-delay: 6s !important;
+	color: #B22222 !important;
+	text-shadow: 2px 2px 4px rgba(0,0,0,0.3), 0 0 8px rgba(178, 34, 34, 0.6) !important;
+	transform-origin: center !important;
+}
+
+.flying-bird.bird4 {
+	animation: randomFly4 13s ease-in-out infinite !important;
+	animation-delay: 2s !important;
+	color: #4682B4 !important;
+	text-shadow: 2px 2px 4px rgba(0,0,0,0.3), 0 0 8px rgba(70, 130, 180, 0.6) !important;
+	transform-origin: center !important;
+}
+
+.flying-bird.bird5 {
+	animation: zigzagFly 8s linear infinite !important;
+	animation-delay: 4s !important;
+	color: #DAA520 !important;
+	text-shadow: 2px 2px 4px rgba(0,0,0,0.3), 0 0 8px rgba(218, 165, 32, 0.6) !important;
+	transform-origin: center !important;
+}
+
+.flying-bird.bird6 {
+	animation: spiralFly 11s ease-in-out infinite !important;
+	animation-delay: 1s !important;
+	color: #DC143C !important;
+	text-shadow: 2px 2px 4px rgba(0,0,0,0.3), 0 0 8px rgba(220, 20, 60, 0.6) !important;
+	transform-origin: center !important;
+}
+
+/* Butterfly elements */
+.floating-butterfly {
+	position: absolute !important;
+	font-size: 24px !important;
+	filter: drop-shadow(2px 2px 6px rgba(0,0,0,0.4)) !important;
+	user-select: none !important;
+	opacity: 1 !important;
+	display: inline-block !important;
+	white-space: nowrap !important;
+	line-height: 1 !important;
+	background: transparent !important;
+	border: none !important;
+	margin: 0 !important;
+	padding: 0 !important;
+}
+
+/* Floating leaves and petals */
+.floating-leaf {
+	position: absolute;
+	font-size: 20px;
+	filter: drop-shadow(1px 1px 3px rgba(0,0,0,0.2));
+	user-select: none;
+	opacity: 1;
+}
+
+.floating-petal {
+	position: absolute;
+	font-size: 18px;
+	filter: drop-shadow(1px 1px 3px rgba(0,0,0,0.2));
+	user-select: none;
+	opacity: 1;
+}
+
+.floating-butterfly.butterfly1 {
+	animation: butterflyDance1 14s ease-in-out infinite !important;
+	animation-delay: 0.5s !important;
+	color: #FF1493 !important;
+	text-shadow: 0 0 15px rgba(255, 20, 147, 1) !important;
+	transform-origin: center !important;
+}
+
+.floating-butterfly.butterfly2 {
+	animation: butterflyDance2 16s ease-in-out infinite !important;
+	animation-delay: 4s !important;
+	color: #FF4500 !important;
+	text-shadow: 0 0 15px rgba(255, 69, 0, 1) !important;
+	transform-origin: center !important;
+}
+
+.floating-butterfly.butterfly3 {
+	animation: butterflyDance1 12s ease-in-out infinite !important;
+	animation-delay: 8s !important;
+	color: #FFD700 !important;
+	text-shadow: 0 0 15px rgba(255, 215, 0, 1) !important;
+	transform-origin: center !important;
+}
+
+.floating-butterfly.butterfly4 {
+	animation: butterflyDance2 18s ease-in-out infinite !important;
+	animation-delay: 2s !important;
+	color: #32CD32 !important;
+	text-shadow: 0 0 15px rgba(50, 205, 50, 1) !important;
+	transform-origin: center !important;
+}
+
+/* Floating leaves */
+.floating-leaf.leaf1 {
+	animation: butterflyDance1 4s ease-in-out infinite !important;
+	animation-delay: 1s !important;
+	color: #228B22 !important;
+	text-shadow: 0 0 10px rgba(34, 139, 34, 0.8) !important;
+	opacity: 1 !important;
+}
+
+.floating-leaf.leaf2 {
+	animation: randomFly1 5s linear infinite !important;
+	animation-delay: 3s !important;
+	color: #FF8C00 !important;
+	text-shadow: 0 0 10px rgba(255, 140, 0, 0.8) !important;
+	opacity: 1 !important;
+}
+
+/* Floating petals */
+.floating-petal.petal1 {
+	animation: butterflyDance2 3s ease-in-out infinite !important;
+	animation-delay: 0.2s !important;
+	color: #FF69B4 !important;
+	text-shadow: 0 0 10px rgba(255, 105, 180, 0.8) !important;
+	opacity: 1 !important;
+}
+
+/* Radio button text styling - make text dark in sidebar */
+.stSidebar .stRadio label,
+.stSidebar .stRadio span,
+.stSidebar div[data-testid="stRadio"] label,
+.stSidebar div[data-testid="stRadio"] span {
+    color: #FFFFFF !important;
+}/* Responsive helpers */
+@media (max-width: 680px) {
+	.app-header { flex-direction: column; text-align: center; }
+}
+
+/* FORCE CREATURE ANIMATIONS - HIGHEST PRIORITY */
+.flying-creatures {
+	display: block !important;
+	visibility: visible !important;
+}
+
+.flying-bird, .floating-butterfly, .floating-leaf, .floating-petal {
+	animation-play-state: running !important;
+	display: block !important;
+	visibility: visible !important;
+}
+
+/* Test animation for debugging */
+@keyframes simple-test {
+	0% { transform: translateX(-100px) !important; }
+	100% { transform: translateX(100vw) !important; }
+}
+
+.test-animation {
+	position: absolute !important;
+	top: 20px !important;
+	left: 0 !important;
+	font-size: 30px !important;
+	color: red !important;
+	animation: simple-test 3s linear infinite !important;
+	z-index: 99999 !important;
+	display: block !important;
+	visibility: visible !important;
+}
+
+/* Force hide HTML content when not animated */
+.flying-creatures div {
+	display: none !important;
+}
+
+/* Show only when properly styled */
+.flying-creatures .flying-bird,
+.flying-creatures .floating-butterfly,
+.flying-creatures .floating-leaf,
+.flying-creatures .floating-petal {
+	display: inline-block !important;
+}
